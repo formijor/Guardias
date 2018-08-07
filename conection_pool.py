@@ -6,29 +6,87 @@ Created on 7 ago. 2018
 
 import sqlite3
 import random
+import manejodb
+import time
 
-
-def crear_conexion(dbFile):
-    conexion = sqlite3.connect(dbFile)
-    return conexion
     
-def close_conexion(conexion):
-    """Cierra la conexion con la base de datos"""
-    try:
-        conexion.close()
+class PoolConexiones():
+    def __init__(self, numero_maximo_conexiones):
+        self.numero_conexiones = numero_maximo_conexiones
+        self.pool_conexiones = {}
+        self.conectar_pool('Data\\pool_config.db')
+        
+    def conectar_pool(self, archivo):
+        self.conexion_pool = sqlite3.connect(archivo)
+        self.cursor_pool = self.conexion_pool.cursor()
+        
+    def obtener_conexiones_activas(self):
+        sql = "SELECT * FROM vista_conexiones_activas"
+        self.cursor_pool.execute(sql)
+        datos = self.cursor_pool.fetchall()
+        print (datos)
+        
+    def guardar_nueva_conexion(self, conexion):
+        fecha = time.strftime("%x")
+        sql = "INSERT INTO conexiones (codigo, archivo,   "
+        
+    def generar_codigo_identificacion_conexion(self):
+        codigo = random.randint(100, 999)
+        while codigo in self.pool_conexiones:
+            codigo = random.randint(100, 999)
+        return codigo
+        
+    def crear_conexion(self, archivo):
+        mensaje = 'Establecer conexion'
+        codigo_conexion = self.generar_codigo_identificacion_conexion()
+        conectado = Conexion(codigo_conexion, archivo, mensaje)
+        self.pool_conexiones[codigo_conexion] = conectado
         return True
-    except:
-        return False
+    
+    def finalizar_conexion(self, codigo_conexion):
+        conexion = self.pool_conexiones.pop(codigo_conexion)
+        conexion.finalizar_conexion()
 
-def crear_cursor(conexion):
-    cursor = conexion.cursor()
-    return cursor 
-
-def cerrar_cursor(cursor):
-    cursor.close()
     
 
-class pool_conexiones():
+
+
+class Conexion():
+    def __init__(self, codigo, cliente, conexion):
+        self.codigo = codigo
+        self.cliente = cliente
+        self.conexion = conexion
+        self.cola_mensajes = []
+    
+    def iniciar_conexion(self, archivo):
+        self.conexion = sqlite3.connect(archivo)
+        self.cursor = self.conexion.cursor()
+        return True
+    
+    def cerrar_conexion(self, codigo, cursor, conexion):
+        self.cursor = self.cursor.close()
+        self.conexion.close()
+        print ('Conexion ' + str(codigo) + ' Terminada')       
+        return True
+
+    #def enviar_mensaje(self, mensaje, datos):
+        
+        
+pool = PoolConexiones(5)
+pool.obtener_conexiones_activas()      
+        
+    
+    
+    
+    
+    
+    
+    
+    
+        
+        
+
+class pool_conexiones2():
     def __init__(self):
         self.conexiones = {}
         self.espera = {}
@@ -37,8 +95,7 @@ class pool_conexiones():
         codigo = self.obtener_codigo_identificacion_conexion()
         conexion = self.abrir_conexion(dbFile)
         conect_cliente = Conexion(codigo, cliente, conexion)
-        self.guardar_conexion(conect_cliente)
-        #print (conect_cliente)
+        self.registrar_conexion(conect_cliente)
         return codigo        
     
     def obtener_codigo_identificacion_conexion(self):         
@@ -47,7 +104,7 @@ class pool_conexiones():
             codigo = random.randint(100, 999)
         return codigo
     
-    def guardar_conexion(self, conexion):
+    def registrar_conexion(self, conexion):
         self.conexiones[conexion.codigo] = conexion
         return True
         
@@ -85,18 +142,22 @@ class pool_conexiones():
         self.espera[conexion.codigo] = conexion
         
     def aprobar_acceso(self, conexion):
-        self.espera.pop(conexion.codigo)    
+        self.espera.pop(conexion.codigo)  
         
     
-class Conexion():
-    def __init__(self, codigo, cliente, conexion):
-        self.codigo = codigo
-        self.cliente = cliente
-        self.conexion = conexion
+    
+    
+    
 
-pool_instancia = pool_conexiones()
-codigo = pool_instancia.solicitar_conexion('Jorge', 'Data\\guardias_data.db')
-print (pool_instancia.conexiones)
-pool_instancia.validar_peticion((codigo, 'Jorge'), 'mensaje')
+
+        
+
+
+
+
+#pool_instancia = pool_conexiones()
+#codigo = pool_instancia.solicitar_conexion('Jorge', 'Data\\guardias_data.db')
+#print (pool_instancia.conexiones)
+#pool_instancia.validar_peticion((codigo, 'Jorge'), 'mensaje')
 #print (pool_instancia.cerrar_conexion(codigo))
         
