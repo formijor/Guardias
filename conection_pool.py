@@ -29,9 +29,15 @@ class PoolConexiones():
     def guardar_nueva_conexion(self, conexion):
         fecha = time.strftime("%x")
         hora = time.strftime("%H:%M:%S")
-        sql = """INSERT INTO conexiones (codigo, archivo, fecha_conexion, 
+        sql = """INSERT INTO conexiones_activas(conexion) VALUES (
+            INSERT INTO conexiones (codigo, archivo, fecha_conexion, 
             hora_conexion) 
             VALUES """ + str((conexion.codigo, conexion.archivo, fecha, hora))
+        self.cursor.execute(sql)
+        self.conexion.commit()
+        #sql = "SELECT last_insert_rowid()"
+        #self.cursor.execute(sql)
+        #self.cursor.
         
         
     def generar_codigo_identificacion_conexion(self):
