@@ -28,7 +28,11 @@ class PoolConexiones():
         
     def guardar_nueva_conexion(self, conexion):
         fecha = time.strftime("%x")
-        sql = "INSERT INTO conexiones (codigo, archivo,   "
+        hora = time.strftime("%H:%M:%S")
+        sql = """INSERT INTO conexiones (codigo, archivo, fecha_conexion, 
+            hora_conexion) 
+            VALUES """ + str((conexion.codigo, conexion.archivo, fecha, hora))
+        
         
     def generar_codigo_identificacion_conexion(self):
         codigo = random.randint(100, 999)
@@ -36,10 +40,10 @@ class PoolConexiones():
             codigo = random.randint(100, 999)
         return codigo
         
-    def crear_conexion(self, archivo):
+    def crear_conexion(self, archivo, cliente):
         mensaje = 'Establecer conexion'
         codigo_conexion = self.generar_codigo_identificacion_conexion()
-        conectado = Conexion(codigo_conexion, archivo, mensaje)
+        conectado = Conexion(codigo_conexion, cliente, archivo)
         self.pool_conexiones[codigo_conexion] = conectado
         return True
     
@@ -52,10 +56,10 @@ class PoolConexiones():
 
 
 class Conexion():
-    def __init__(self, codigo, cliente, conexion):
+    def __init__(self, codigo, cliente, archivo):
         self.codigo = codigo
         self.cliente = cliente
-        self.conexion = conexion
+        self.archivo = archivo
         self.cola_mensajes = []
     
     def iniciar_conexion(self, archivo):
