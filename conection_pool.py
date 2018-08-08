@@ -24,21 +24,17 @@ class PoolConexiones():
         sql = "SELECT * FROM vista_conexiones_activas"
         self.cursor_pool.execute(sql)
         datos = self.cursor_pool.fetchall()
-        print (datos)
-        
+        return datos
+                   
     def guardar_nueva_conexion(self, conexion):
         fecha = time.strftime("%x")
         hora = time.strftime("%H:%M:%S")
-        sql = """INSERT INTO conexiones_activas(conexion) VALUES (
-            INSERT INTO conexiones (codigo, archivo, fecha_conexion, 
-            hora_conexion) 
+        sql = """INSERT INTO conexiones (codigo, archivo, fecha_conexion, 
+            hora_conexion)
             VALUES """ + str((conexion.codigo, conexion.archivo, fecha, hora))
-        self.cursor.execute(sql)
-        self.conexion.commit()
-        #sql = "SELECT last_insert_rowid()"
-        #self.cursor.execute(sql)
-        #self.cursor.
-        
+        #print (sql)
+        self.cursor_pool.execute(sql)
+        #self.conexion_pool.commit()
         
     def generar_codigo_identificacion_conexion(self):
         codigo = random.randint(100, 999)
@@ -51,15 +47,44 @@ class PoolConexiones():
         codigo_conexion = self.generar_codigo_identificacion_conexion()
         conectado = Conexion(codigo_conexion, cliente, archivo)
         self.pool_conexiones[codigo_conexion] = conectado
-        return True
+        #self.guardar_nueva_conexion(conectado)
+        return conectado
     
-    def finalizar_conexion(self, codigo_conexion):
-        conexion = self.pool_conexiones.pop(codigo_conexion)
-        conexion.finalizar_conexion()
-
+    def finalizar_conexion(self, codigo):
+        conexion = self.pool_conexiones.pop(codigo)
+        conexion.cerrar_conexion()
+        
+    def registrar_desconexion(self, conexion):
+        fecha = time.strftime("%x")
+        hora = time.strftime("%H:%M:%S")
+        sql = "UPDATE conexiones SET fecha_desconexion = " + "'"+fecha+"'"
+        sql += ", hora_desconexion = " + str('"'+hora+'"')
+        sql += " WHERE fecha_desconexion is not Null OR fecha_desconexion = 0;"
+        #print (sql)
+        self.cursor_pool.execute(sql)
+        self.conexion_pool.commit()    
+   
+    def imprimir_conexiones_activas(self, datos):
+        print("CONEXIONES ACTIVAS \n------------------------------")
+        columnas = ('id_conexiones_activas', 'codigo', 'archivo', 'fecha_conexion', 'hora_conexion')
+        for D in datos:
+            for cont in range(len(columnas)):
+                print (columnas[cont] + ": " + str(D[cont]))
+            print ("\n-------------------------------")
+            
+    def borrar_datos_tablas(self):
+        sql = "DELETE FROM conexiones_activas"
+        self.cursor_pool.execute(sql)
+        self.conexion_pool.commit()
+        
+    def test(self):
+        sql = """SELECT * FROM conexiones_activas, vista_conexiones 
+                        WHERE conexion = id_conexion and fecha_desconexion is not NULL
+                """
+        self.cursor_pool.execute(sql)
+        datos = self.cursor_pool.fetchall()
+        print (datos)
     
-
-
 
 class Conexion():
     def __init__(self, codigo, cliente, archivo):
@@ -67,107 +92,53 @@ class Conexion():
         self.cliente = cliente
         self.archivo = archivo
         self.cola_mensajes = []
+        self.iniciar_conexion()
     
-    def iniciar_conexion(self, archivo):
-        self.conexion = sqlite3.connect(archivo)
+    def iniciar_conexion(self):
+        self.conexion = sqlite3.connect(self.archivo)
         self.cursor = self.conexion.cursor()
         return True
     
-    def cerrar_conexion(self, codigo, cursor, conexion):
-        self.cursor = self.cursor.close()
+    def cerrar_conexion(self):
+        self.cursor.close()
         self.conexion.close()
-        print ('Conexion ' + str(codigo) + ' Terminada')       
+        print ('Conexion ' + str(self.codigo) + ' Terminada')       
         return True
 
     #def enviar_mensaje(self, mensaje, datos):
+
+def imprimir_tabla(pool):
+    sql = "SELECT * FROM conexiones_activas"    
+    pool.cursor_pool.execute(sql)
+    print (pool.cursor_pool.fetchall())
         
         
+        
+#---------------------------TEST--------------------       
 pool = PoolConexiones(5)
-pool.obtener_conexiones_activas()      
-        
-    
-    
-    
-    
-    
-    
-    
-    
-        
-        
+conect = pool.crear_conexion('Data\guardias_data.db', 'Jorge')
+#pool.registrar_desconexion(conect)
+#datos = pool.obtener_conexiones_activas()      
+#pool.imprimir_conexiones_activas(datos)
+pool.test()
+"""
+conect = pool.crear_conexion('Data\guardias_data.db', 'Jorge')
+datos = pool.obtener_conexiones_activas()      
+pool.imprimir_conexiones_activas(datos)
 
-class pool_conexiones2():
-    def __init__(self):
-        self.conexiones = {}
-        self.espera = {}
-        
-    def solicitar_conexion(self, cliente, dbFile):
-        codigo = self.obtener_codigo_identificacion_conexion()
-        conexion = self.abrir_conexion(dbFile)
-        conect_cliente = Conexion(codigo, cliente, conexion)
-        self.registrar_conexion(conect_cliente)
-        return codigo        
-    
-    def obtener_codigo_identificacion_conexion(self):         
-        codigo = random.randint(100, 999)
-        while codigo in self.conexiones:
-            codigo = random.randint(100, 999)
-        return codigo
-    
-    def registrar_conexion(self, conexion):
-        self.conexiones[conexion.codigo] = conexion
-        return True
-        
-    def eliminar_conexion(self, codigo):
-        conexion = self.conexiones.pop(codigo)
-        return conexion
-    
-    def abrir_conexion(self, dbFile):
-        conexion = crear_conexion(dbFile)
-        cursor = crear_cursor(conexion)
-        print ('Cliente Conectado')
-        return (cursor, conexion)
-    
-    def cerrar_conexion(self, codigo):
-        conect = self.eliminar_conexion(codigo)
-        cerrar_cursor(conect.conexion[0])
-        close_conexion(conect.conexion[1])
-        print ('Conexion ' + str(codigo) + ' Terminada')       
-        return True
-    
-    def validar_peticion(self, credencial, mensaje):
-        if credencial[0] not in self.espera and credencial[0] in self.conexiones:
-            conexion = self.conexiones[credencial[0]]
-            if conexion.cliente == credencial[1]:
-                print ('Solicitud aprobada')
-                print (mensaje)
-                #self.manejador_base_datos.recibir_accion(mensaje)
-            else:
-                self.cerrar_conexion(codigo)
-                print ('Conexion no valida 2')
-        else:
-            print ('Conexion no valida 1')
-            
-    def denegar_acceso(self, conexion):
-        self.espera[conexion.codigo] = conexion
-        
-    def aprobar_acceso(self, conexion):
-        self.espera.pop(conexion.codigo)  
-        
-    
-    
-    
-    
+input()
+
+pool.registrar_desconexion(conect)
+datos = pool.obtener_conexiones_activas()
+pool.imprimir_conexiones_activas(datos)
 
 
-        
+#pool.borrar_datos_tablas()
+
+#imprimir_tabla(pool)   " + str(conexion.codigo) + " = codigo AND
+
+"""
 
 
 
-
-#pool_instancia = pool_conexiones()
-#codigo = pool_instancia.solicitar_conexion('Jorge', 'Data\\guardias_data.db')
-#print (pool_instancia.conexiones)
-#pool_instancia.validar_peticion((codigo, 'Jorge'), 'mensaje')
-#print (pool_instancia.cerrar_conexion(codigo))
-        
+    
