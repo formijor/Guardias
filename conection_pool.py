@@ -47,7 +47,7 @@ class PoolConexiones():
         codigo_conexion = self.generar_codigo_identificacion_conexion()
         conectado = Conexion(codigo_conexion, cliente, archivo)
         self.pool_conexiones[codigo_conexion] = conectado
-        #self.guardar_nueva_conexion(conectado)
+        self.guardar_nueva_conexion(conectado)
         return conectado
     
     def finalizar_conexion(self, codigo):
@@ -58,9 +58,10 @@ class PoolConexiones():
         fecha = time.strftime("%x")
         hora = time.strftime("%H:%M:%S")
         sql = "UPDATE conexiones SET fecha_desconexion = " + "'"+fecha+"'"
-        sql += ", hora_desconexion = " + str('"'+hora+'"')
-        sql += " WHERE fecha_desconexion is not Null OR fecha_desconexion = 0;"
-        #print (sql)
+        sql += ", hora_desconexion = " + str('"'+hora+'"') 
+        print (conexion.codigo)
+        #sql +=  "WHERE codigo = " + str(conexion.codigo)  
+        sql += " WHERE fecha_desconexion is Null"
         self.cursor_pool.execute(sql)
         self.conexion_pool.commit()    
    
@@ -78,8 +79,7 @@ class PoolConexiones():
         self.conexion_pool.commit()
         
     def test(self):
-        sql = """SELECT * FROM conexiones_activas, vista_conexiones 
-                        WHERE conexion = id_conexion and fecha_desconexion is not NULL
+        sql = """SELECT * FROM conexiones
                 """
         self.cursor_pool.execute(sql)
         datos = self.cursor_pool.fetchall()
@@ -116,28 +116,26 @@ def imprimir_tabla(pool):
         
 #---------------------------TEST--------------------       
 pool = PoolConexiones(5)
-conect = pool.crear_conexion('Data\guardias_data.db', 'Jorge')
-#pool.registrar_desconexion(conect)
-#datos = pool.obtener_conexiones_activas()      
-#pool.imprimir_conexiones_activas(datos)
-pool.test()
-"""
+datos = pool.obtener_conexiones_activas()      
+pool.imprimir_conexiones_activas(datos)
+#pool.test()
+
 conect = pool.crear_conexion('Data\guardias_data.db', 'Jorge')
 datos = pool.obtener_conexiones_activas()      
 pool.imprimir_conexiones_activas(datos)
 
-input()
+#input()
 
 pool.registrar_desconexion(conect)
 datos = pool.obtener_conexiones_activas()
 pool.imprimir_conexiones_activas(datos)
+pool.test()
 
 
 #pool.borrar_datos_tablas()
 
-#imprimir_tabla(pool)   " + str(conexion.codigo) + " = codigo AND
+#imprimir_tabla(pool)  """
 
-"""
 
 
 
