@@ -14,7 +14,7 @@ class PoolConexiones():
     def __init__(self, numero_maximo_conexiones):
         self.numero_conexiones = numero_maximo_conexiones
         self.pool_conexiones = {}
-        self.conectar_pool('Data\\pool_config.db')
+        self.conectar_pool('Data\pool_config.db')
         
     def conectar_pool(self, archivo):
         self.conexion_pool = sqlite3.connect(archivo)
@@ -34,12 +34,13 @@ class PoolConexiones():
             VALUES """ + str((conexion.codigo, conexion.archivo, fecha, hora))
         #print (sql)
         self.cursor_pool.execute(sql)
-        #self.conexion_pool.commit()
+        self.conexion_pool.commit()
         
     def generar_codigo_identificacion_conexion(self):
         codigo = random.randint(100, 999)
         while codigo in self.pool_conexiones:
             codigo = random.randint(100, 999)
+        print ("Codigo = " + str(codigo))
         return codigo
         
     def crear_conexion(self, archivo, cliente):
@@ -58,12 +59,11 @@ class PoolConexiones():
         fecha = time.strftime("%x")
         hora = time.strftime("%H:%M:%S")
         sql = "UPDATE conexiones SET fecha_desconexion = " + "'"+fecha+"'"
-        sql += ", hora_desconexion = " + str('"'+hora+'"') 
-        print (conexion.codigo)
-        #sql +=  "WHERE codigo = " + str(conexion.codigo)  
-        sql += " WHERE fecha_desconexion is Null"
+        sql += ", hora_desconexion = " + str('"'+hora+'"')
+        sql += "WHERE codigo = " + str(conexion.codigo) + " AND (fecha_desconexion is Null OR fecha_desconexion = 0);"        
         self.cursor_pool.execute(sql)
-        self.conexion_pool.commit()    
+        self.conexion_pool.commit()
+        
    
     def imprimir_conexiones_activas(self, datos):
         print("CONEXIONES ACTIVAS \n------------------------------")
@@ -78,9 +78,7 @@ class PoolConexiones():
         self.cursor_pool.execute(sql)
         self.conexion_pool.commit()
         
-    def test(self):
-        sql = """SELECT * FROM conexiones
-                """
+    def test(self, sql):
         self.cursor_pool.execute(sql)
         datos = self.cursor_pool.fetchall()
         print (datos)
@@ -116,25 +114,33 @@ def imprimir_tabla(pool):
         
 #---------------------------TEST--------------------       
 pool = PoolConexiones(5)
-datos = pool.obtener_conexiones_activas()      
-pool.imprimir_conexiones_activas(datos)
-#pool.test()
+#datos = pool.obtener_conexiones_activas()      
+#pool.imprimir_conexiones_activas(datos)
+pool.test("""SELECT * FROM conexiones_activas
+                """)
 
 conect = pool.crear_conexion('Data\guardias_data.db', 'Jorge')
-datos = pool.obtener_conexiones_activas()      
-pool.imprimir_conexiones_activas(datos)
+#datos = pool.obtener_conexiones_activas()      
+#pool.imprimir_conexiones_activas(datos)
 
-#input()
+input()
 
 pool.registrar_desconexion(conect)
-datos = pool.obtener_conexiones_activas()
-pool.imprimir_conexiones_activas(datos)
-pool.test()
+#datos = pool.obtener_conexiones_activas()
+#pool.imprimir_conexiones_activas(datos)
+pool.test("""SELECT * FROM conexiones
+                """)
+pool.test("""SELECT * FROM vista_conexiones_activas
+                """)
+pool.test("""SELECT * FROM log
+                """)
+input()
 
 
 #pool.borrar_datos_tablas()
 
-#imprimir_tabla(pool)  """
+#imprimir_tabla(pool)  
+#'''
 
 
 
